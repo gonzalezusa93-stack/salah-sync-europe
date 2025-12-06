@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salah Sync - Creator Hub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #00838F; /* Tu Azul Corporativo */
+            --dark: #1a1a1a;
+            --safe: #27ae60;    /* Verde Seguro */
+            --warn: #c0392b;    /* Rojo Alerta */
+            --bg: #f4f6f8;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--dark);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* --- CONTENEDOR PRINCIPAL (Móvil) --- */
+        .app-container {
+            background: white;
+            width: 100%;
+            max-width: 450px; /* Ancho tipo móvil */
+            min-height: 100vh;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- CABECERA & SEMÁFORO --- */
+        .header {
+            background: var(--dark);
+            color: white;
+            padding: 25px 20px;
+            border-bottom-left-radius: 25px;
+            border-bottom-right-radius: 25px;
+            text-align: center;
+        }
+        .app-title {
+            margin: 0;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .location-badge {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        
+        /* Semáforo del Creador */
+        .creator-status {
+            margin-top: 15px;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 50px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .dot { height: 10px; width: 10px; border-radius: 50%; display: block; }
+        .status-safe .dot { background: var(--safe); box-shadow: 0 0 10px var(--safe); }
+        .status-warn .dot { background: var(--warn); box-shadow: 0 0 10px var(--warn); }
+
+        /* --- CUENTA ATRÁS --- */
+        .timer-section {
+            text-align: center;
+            padding: 30px 20px;
+        }
+        .next-label { color: #666; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; }
+        .timer-display {
+            font-size: 3.8rem;
+            font-weight: 800;
+            line-height: 1.1;
+            color: var(--dark);
+            font-variant-numeric: tabular-nums;
+        }
+        .hijri-display {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        /* --- LISTA DE REZOS --- */
+        .prayer-list {
+            padding: 0 20px;
+            flex-grow: 1; /* Ocupa el espacio restante */
+        }
+        .prayer-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 18px;
+            margin-bottom: 12px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #eee;
+            transition: transform 0.2s;
+        }
+        .prayer-card.active {
+            background: #e0f7fa;
+            border-color: var(--primary);
+            border-left: 5px solid var(--primary);
+        }
+        .prayer-time { font-weight: 700; color: var(--dark); font-size: 1.1rem; }
+        .prayer-name { color: #555; font-weight: 500; }
+
+        /* --- QIBLA (PIE DE PÁGINA) --- */
+        .footer-qibla {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        .compass-circle {
+            width: 40px;
+            height: 40px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .compass-arrow {
+            font-size: 1.2rem;
+            color: var(--primary); /* La aguja apunta a La Meca */
+            transform: rotate(0deg); /* Se actualizará con JS */
+            transition: transform 1s cubic-bezier(0.4, 2, 0.55, 0.44);
+        }
+
+        /* Botón Actualizar */
+        .btn-refresh {
+            position: absolute;
+            top: 25px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div class="header">
+            <button class="btn-refresh" onclick="initApp()"><i class="fas fa-sync-alt"></i></button>
+            <h1 class="app-title">Salah Sync</h1>
+            <div class="location-badge" id="locationInfo"><i class="fas fa-map-marker-alt"></i> Localizando...</div>
+            
+            <div id="statusBox" class="creator-status status-safe">
+                <span class="dot"></span>
+                <span id="statusText">Calculando...</span>
+            </div>
+        </div>
+
+        <div class="timer-section">
+            <div class="next-label">Próximo: <span id="nextName">--</span></div>
+            <div class="timer-display" id="timer">--:--:--</div>
+            <div class="hijri-display" id="hijriDate">Cargando fecha...</div>
+        </div>
+
+        <div class="prayer-list" id="prayerList">
+            </div>
+
+        <div class="footer-qibla">
+            <div class="compass-circle">
+                <i class="fas fa-location-arrow compass-arrow" id="qiblaArrow"></i>
+            </div>
+            <div>
+                <div style="font-size:0.8rem; opacity:0.7">DIRECCIÓN QIBLA</div>
+                <strong id="qiblaValue">--°</strong>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/adhan@4.4.0/Bundles/adhan.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-hijri/2.1.2/moment-hijri.min.js"></script>
+
+    <script>
+        // --- CÓDIGO INTELIGENTE ---
+        
+        function initApp() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(onLocationFound, onLocationError);
+            } else {
+                alert("Necesitamos tu ubicación para calcular los horarios exactos de Europa.");
+            }
+        }
+
+        function onLocationFound(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            
+            // 1. Mostrar Coordenadas
+            document.getElementById('locationInfo').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${lat.toFixed(2)}, ${lng.toFixed(2)}`;
+
+            // 2. Configurar Cálculo (EUROPA)
+            const coordinates = new adhan.Coordinates(lat, lng);
+            const date = new Date();
+            const params = adhan.CalculationMethod.MuslimWorldLeague(); // Estándar Europa
+            params.madhab = adhan.Madhab.Shafi; 
+            params.highLatitudeRule = adhan.HighLatitudeRule.SeventhOfTheNight; // CRUCIAL para verano europeo
+
+            const prayerTimes = new adhan.PrayerTimes(coordinates, date, params);
+            
+            // 3. Ejecutar funciones
+            renderPrayers(prayerTimes);
+            startTimer(prayerTimes);
+            showHijri();
+            showQibla(coordinates);
+        }
+
+        function renderPrayers(times) {
+            const list = document.getElementById('prayerList');
+            list.innerHTML = '';
+            
+            const prayers = [
+                { id: 'fajr', name: 'Fajr' },
+                { id: 'sunrise', name: 'Amanecer (Shuruq)' }, // Solo informativo
+                { id: 'dhuhr', name: 'Dhuhr' },
+                { id: 'asr', name: 'Asr' },
+                { id: 'maghrib', name: 'Maghrib' },
+                { id: 'isha', name: 'Isha' }
+            ];
+
+            const now = new Date();
+            let nextFound = false;
+
+            prayers.forEach(p => {
+                const time = times[p.id];
+                const timeStr = moment(time).format('HH:mm');
+                const isNext = !nextFound && time > now && p.id !== 'sunrise';
+                
+                // Crear tarjeta HTML
+                const card = document.createElement('div');
+                card.className = `prayer-card ${isNext ? 'active' : ''}`;
+                card.innerHTML = `
+                    <span class="prayer-name">${p.name}</span>
+                    <span class="prayer-time">${timeStr}</span>
+                `;
+                list.appendChild(card);
+
+                if (isNext) {
+                    document.getElementById('nextName').innerText = p.name;
+                    nextFound = true;
+                }
+            });
+        }
+
+        function startTimer(times) {
+            setInterval(() => {
+                const now = new Date();
+                const next = times.nextPrayer();
+                
+                if (next === 'none') {
+                    document.getElementById('timer').innerText = "Fin del día";
+                    return;
+                }
+
+                const nextTime = times[next.toLowerCase()];
+                const diff = nextTime - now;
+
+                // Cálculo de tiempo
+                const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                const minutes = Math.floor((diff / (1000 * 60)) % 60);
+                const seconds = Math.floor((diff / 1000) % 60);
+
+                // Mostrar en pantalla
+                document.getElementById('timer').innerText = 
+                    `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+
+                // --- LÓGICA SEMÁFORO DEL CREADOR ---
+                const totalMinutes = (hours * 60) + minutes;
+                const statusBox = document.getElementById('statusBox');
+                const statusText = document.getElementById('statusText');
+
+                // Si quedan menos de 20 min = PELIGRO (No grabes)
+                if (totalMinutes < 20) {
+                    statusBox.className = 'creator-status status-warn';
+                    statusText.innerText = "Rezo cercano (Pausa)";
+                } else {
+                    statusBox.className = 'creator-status status-safe';
+                    statusText.innerText = "Seguro para grabar";
+                }
+
+            }, 1000);
+        }
+
+        function showHijri() {
+            // Usa librería moment-hijri
+            const hDate = moment().format('iD iMMMM iYYYY'); 
+            document.getElementById('hijriDate').innerText = `📅 ${hDate} AH`;
+        }
+
+        function showQibla(coords) {
+            const qibla = adhan.Qibla(coords);
+            document.getElementById('qiblaValue').innerText = `${qibla.toFixed(0)}°`;
+            // Girar la flecha
+            document.getElementById('qiblaArrow').style.transform = `rotate(${qibla}deg)`;
+        }
+
+        function pad(n) { return n < 10 ? '0'+n : n; }
+        function onLocationError() { 
+            document.getElementById('locationInfo').innerText = "Ubicación denegada"; 
+        }
+
+        // Iniciar
+        initApp();
+    </script>
+</body>
+</html>
